@@ -39,10 +39,18 @@ public class Account {
     @LastModifiedDate
     private LocalDateTime updatedAt;
 
+    // 잔액 사용
     public void useBalance(Long amount) {
         if (amount > balance) {
             throw new AccountException(ErrorCode.AMOUNT_EXCEED_BALANCE);
         }
         balance -= amount;
+    }
+    // 잔액 사용 취소
+    public void cancelBalance(Long amount) {
+        if (amount < 0) {
+            throw new AccountException(ErrorCode.INVALID_REQUEST);
+        }
+        balance += amount;
     }
 }

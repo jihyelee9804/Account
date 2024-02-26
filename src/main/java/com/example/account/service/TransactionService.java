@@ -11,6 +11,7 @@ import com.example.account.repository.TransactionRepository;
 import com.example.account.type.AccountStatus;
 import com.example.account.type.ErrorCode;
 import com.example.account.type.TransactionResultType;
+import com.example.account.type.TransactionType;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -22,6 +23,7 @@ import java.util.UUID;
 
 import static com.example.account.type.TransactionResultType.F;
 import static com.example.account.type.TransactionResultType.S;
+import static com.example.account.type.TransactionType.CANCEL;
 import static com.example.account.type.TransactionType.USE;
 
 @Slf4j
@@ -52,7 +54,7 @@ public class TransactionService {
         // 잔액 사용 후 account 잔액 수정
         account.useBalance(amount);
         // 잔액 사용 성공 transaction 저장
-        return TransactionDto.fromEntity(saveAndGetTransaction(S, amount, account)
+        return TransactionDto.fromEntity(saveAndGetTransaction(USE, S, amount, account)
         );
 
     }
@@ -79,14 +81,16 @@ public class TransactionService {
         Account account = accountRepository.findByAccountNumber(accountNumber)
                 .orElseThrow(() -> new AccountException(ErrorCode.ACCOUNT_NOT_FOUND));
         // 잔액 사용 실패 transaction 저장
-        saveAndGetTransaction(F, amount, account);
+        saveAndGetTransaction(USE, F, amount, account);
     }
 
     // transaction 저장 - 성공 시, 실패 시 코드 중복으로 메소드화
-    private Transaction saveAndGetTransaction(TransactionResultType transactionResultType, Long amount, Account account) {
+    private Transaction saveAndGetTransaction(TransactionType transactionType,
+            TransactionResultType transactionResultType, Long amount, Account account) {
+        // transaction 을 저장하고 Transaction Entity 객체를 반환한다.
         return transactionRepository.save(
                 Transaction.builder()
-                        .transactionType(USE)
+                        .transactionType(transactionType)
                         .transactionResultType(transactionResultType)
                         .account(account)
                         .amount(amount)
@@ -95,5 +99,54 @@ public class TransactionService {
                         .transactedAt(LocalDateTime.now())
                         .build()
         );
+    }
+
+    // 잔액 사용 취소
+    @Transactional
+    public TransactionDto cancelBalance(String transactionId, String accountNumber,
+                                        Long amount) {
+        // 취소하려는 거래 조회
+        Transaction transaction = transactionRepository.findByTransactionId(transactionId)
+                .orElseThrow(() -> new AccountException(ErrorCode.TRANSACTION_NOT_FOUND));
+        // 계좌 조회
+        Account account = accountRepository.findByAccountNumber(accountNumber)
+                .orElseThrow(() -> new AccountException(ErrorCode.ACCOUNT_NOT_FOUND));
+        // 잔액사용취소 메소드를 호출하고 해당 거래, 사용자 계좌, 거래 금액을 인자로 전달한다.
+        validateCancelBalance(transaction, account, amount);
+
+        account.cancelBalance(amount);
+
+        return TransactionDto.fromEntity(
+                saveAndGetTransaction(CANCEL, S, amount, account)
+        );
+    }
+
+    // 잔액 사용취소 유효성 검사
+    private void validateCancelBalance(Transaction transaction, Account account, Long amount) {
+        // 거래계좌와 사용취소계좌가 일치하는지 확인
+        if (!Objects.equals(transaction.getAccount().getId(), account.getId())) {
+            throw new AccountException(ErrorCode.TRANSACTION_ACCOUNT_UN_MATCH);
+        }
+        if (!Objects.equals(transaction.getAmount(), amount)) {
+            throw new AccountException(ErrorCode.CANCEL_MUST_FULLY);
+        }
+        if(transaction.getTransactedAt().isBefore(LocalDateTime.now().minusYears(1))) {
+            throw new AccountException(ErrorCode.TOO_OLD_ORDER_TO_CANCEL);
+        }
+    }
+
+    // 잔액사용취소 실패 트랜잭션 저장
+    @Transactional
+    public void saveFailedCancelTransaction(String accountNumber, Long amount) {
+        // 계좌 생성
+        Account account = accountRepository.findByAccountNumber(accountNumber)
+                .orElseThrow(() -> new AccountException(ErrorCode.ACCOUNT_NOT_FOUND));
+        // 잔액 사용 실패 transaction 저장
+        saveAndGetTransaction(CANCEL, F, amount, account);
+    }
+
+    public TransactionDto queryTransaction(String transactionId) {
+        return TransactionDto.fromEntity(transactionRepository.findByTransactionId(transactionId)
+                .orElseThrow(() -> new AccountException(ErrorCode.TRANSACTION_NOT_FOUND)));
     }
 }
