@@ -34,7 +34,7 @@ public class AccountService {
     @Transactional
     public AccountDto createAccount(Long userId, Long initialBalance) {
 
-        AccountUser accountUser = accountUserRepository.findById(userId) // 반환타입이 Optional
+        AccountUser accountUser = accountUserRepository.findById(userId)
                 .orElseThrow(() -> new AccountException(USER_NOT_FOUND));
 
         validateCreateAccount(accountUser);

@@ -1,5 +1,6 @@
 package com.example.account.controller;
 
+import com.example.account.aop.AccountLock;
 import com.example.account.dto.CancelBalance;
 import com.example.account.dto.QueryTransactionResponse;
 import com.example.account.dto.TransactionDto;
@@ -22,12 +23,15 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class TransactionController {
     private final TransactionService transactionService;
+
+    @AccountLock
     @PostMapping("/transaction/use")
     public UseBalance.Response useBalance(
             @Valid @RequestBody UseBalance.Request request
-    ){
+    ) throws InterruptedException {
 
         try {
+            Thread.sleep(3000L);
             return UseBalance.Response.from(
                 transactionService.useBalance(request.getUserId(),
                     request.getAccountNumber(), request.getAmount()));
@@ -44,6 +48,7 @@ public class TransactionController {
 
     // 잔액 사용 취소
     @PostMapping("/transaction/cancel")
+    @AccountLock
     public CancelBalance.Response useBalance(
             @Valid @RequestBody CancelBalance.Request request
     ){

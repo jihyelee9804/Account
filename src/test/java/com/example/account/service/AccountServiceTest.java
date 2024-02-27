@@ -108,7 +108,7 @@ class AccountServiceTest {
     void deleteAccountSuccess() {
         //given
         AccountUser user = AccountUser.builder()
-                .id(12L)
+                .id(1L)
                 .name("Pobi").build();
         given(accountUserRepository.findById(anyLong()))
                 .willReturn(Optional.of(user));
@@ -120,7 +120,7 @@ class AccountServiceTest {
         ArgumentCaptor<Account> captor = ArgumentCaptor.forClass(Account.class);
 
         //when
-        AccountDto accountDto = accountService.deleteAccount(1L, "1234567890");
+        AccountDto accountDto = accountService.deleteAccount(1L, "1000000012");
 
         //then
         verify(accountRepository,times(1)).save(captor.capture());

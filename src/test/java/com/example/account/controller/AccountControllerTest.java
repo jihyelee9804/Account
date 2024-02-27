@@ -1,11 +1,14 @@
 package com.example.account.controller;
 
 import com.example.account.domain.Account;
+import com.example.account.domain.AccountUser;
 import com.example.account.dto.AccountDto;
 import com.example.account.dto.CreateAccount;
 import com.example.account.dto.DeleteAccount;
+import com.example.account.exception.AccountException;
 import com.example.account.service.AccountService;
 import com.example.account.type.AccountStatus;
+import com.example.account.type.ErrorCode;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.DisplayName;
@@ -26,6 +29,7 @@ import static org.mockito.BDDMockito.given;
 import static org.springframework.mock.http.server.reactive.MockServerHttpRequest.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -34,8 +38,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class AccountControllerTest {
     @MockBean
     private AccountService accountService;
-    @MockBean
-//    private RedisTestService redisTestService;
 
     @Autowired
     private MockMvc mockMvc;
@@ -45,22 +47,41 @@ class AccountControllerTest {
 
     @Test
     @DisplayName("계좌 조회 성공")
-    void successGetAccount() throws Exception{ // 계좌 확인
+    void successGetAccount() throws Exception{
         //given
+        AccountUser user = AccountUser.builder()
+                .id(12L)
+                .name("pobi")
+                .build();
         given(accountService.getAccount(anyLong()))
                 .willReturn(Account.builder()
+                        .accountUser(user)
                         .accountNumber("3456")
                         .accountStatus(AccountStatus.IN_USE)
                         .build());
         //when
         //then
-        mockMvc.perform(get("/account/876"))
+        mockMvc.perform(get("/account/12"))
                 .andDo(print())
                 .andExpect(jsonPath("$.accountNumber").value("3456"))
                 .andExpect(jsonPath("$.accountStatus").value("IN_USE"))
                 .andExpect(status().isOk());
     }
 
+    @Test
+    @DisplayName("계좌 조회 실패")
+    void failGetAccount() throws Exception{
+        //given
+        given(accountService.getAccount(anyLong()))
+                .willThrow(new AccountException(ErrorCode.ACCOUNT_NOT_FOUND));
+        //when
+        //then
+        mockMvc.perform(get("/account/876"))
+                .andDo(print())
+                .andExpect(jsonPath("$.errorCode").value("ACCOUNT_NOT_FOUND"))
+                .andExpect(jsonPath("$.errorMessage").value("계좌가 없습니다."))
+                .andExpect(status().isOk());
+    }
 //    @Test
 //    void successCreateAccount() throws JsonProcessingException {
 //        //given

@@ -1,5 +1,6 @@
 package com.example.account.dto;
 
+import com.example.account.aop.AccountLockIdInterface;
 import com.example.account.type.TransactionResultType;
 import jakarta.validation.constraints.*;
 import lombok.*;
@@ -17,7 +18,7 @@ public class UseBalance { // 잔액 사용 API에 사용되는 요청, 응답 �
     @Getter
     @Setter
     @AllArgsConstructor
-    public static class Request {
+    public static class Request implements AccountLockIdInterface {
         @NotNull // null이 아님 유효성검사
         @Min(1) // 최소값 1
         private Long userId;
