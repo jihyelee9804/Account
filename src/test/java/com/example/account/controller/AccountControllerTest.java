@@ -50,9 +50,9 @@ class AccountControllerTest {
     void successGetAccount() throws Exception{
         //given
         AccountUser user = AccountUser.builder()
-                .id(12L)
                 .name("pobi")
                 .build();
+        user.setId(12L);
         given(accountService.getAccount(anyLong()))
                 .willReturn(Account.builder()
                         .accountUser(user)
